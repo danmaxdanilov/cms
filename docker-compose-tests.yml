@@ -1,0 +1,29 @@
+version: '3.4'
+
+services:
+  rabbitmq-test:
+    image: rabbitmq:3-management-alpine
+    logging: 
+      driver: none
+
+  CMS-api-functional-test:
+    image: ${REGISTRY:-CMS}/CMS-api-test:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: Services/CMS/CMS.API/Dockerfile
+      target: functionaltest
+    depends_on:
+      - rabbitmq-test
+    volumes:
+      - ${BUILD_ARTIFACTSTAGINGDIRECTORY:-./tests-results/}:/tests
+
+  CMS-api-unit-test:
+    image: ${REGISTRY:-CMS}/CMS-api-unit-test:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: Services/CMS/CMS.API/Dockerfile
+      target: unittest
+    depends_on:
+      - rabbitmq-test
+    volumes:
+      - ${BUILD_ARTIFACTSTAGINGDIRECTORY:-./tests-results/}:/tests

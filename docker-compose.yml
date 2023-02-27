@@ -1,0 +1,9 @@
+version: '3.4'
+
+services:
+
+  CMS-api:
+    image: ${REGISTRY:-CMS}/CMS.api:${PLATFORM:-linux}-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: Services/CMS/CMS.API/Dockerfile

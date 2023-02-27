@@ -1,0 +1,45 @@
+version: '3.4'
+
+services:
+  rabbitmq-test:
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+
+  CMS-api-functional-test:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:80
+      - ConnectionString=
+      - EventBusConnection=${ESHOP_AZURE_SERVICE_BUS:-rabbitmq-test}
+      - EventBusUserName=${ESHOP_SERVICE_BUS_USERNAME}
+      - EventBusPassword=${ESHOP_SERVICE_BUS_PASSWORD}
+      - AzureServiceBusEnabled=False
+      - OrchestratorType=${ORCHESTRATOR_TYPE}
+      - UseLoadTest=${USE_LOADTEST:-False}
+    ports:
+      - "5103:80"
+    entrypoint:
+        - dotnet
+        - test
+        - --logger
+        - trx;LogFileName=/tests/CMS-functional-test-results.trx
+
+  CMS-api-unit-test:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:80
+      - ConnectionString=
+      - EventBusConnection=${ESHOP_AZURE_SERVICE_BUS:-rabbitmq-test}
+      - EventBusUserName=${ESHOP_SERVICE_BUS_USERNAME}
+      - EventBusPassword=${ESHOP_SERVICE_BUS_PASSWORD}
+      - AzureServiceBusEnabled=False
+      - OrchestratorType=${ORCHESTRATOR_TYPE}
+      - UseLoadTest=${USE_LOADTEST:-False}
+    ports:
+      - "5113:80"
+    entrypoint:
+        - dotnet
+        - test
+        - --logger
+        - trx;LogFileName=/tests/CMS-unit-test-results.trx

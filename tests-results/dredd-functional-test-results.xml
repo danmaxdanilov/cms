@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="232d5ea8-036f-4c6e-9b00-2133dc8c6bcc" name="@e706f47df924 2021-06-29 12:01:01" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2021-06-29T12:01:01.8860284+00:00" queuing="2021-06-29T12:01:01.8860284+00:00" start="2021-06-29T12:00:54.6155733+00:00" finish="2021-06-29T12:01:01.9029779+00:00" />
+  <TestSettings name="default" id="3855f220-c7c7-4565-8cef-9c59a5cd2f1e">
+    <Deployment runDeploymentRoot="_e706f47df924_2021-06-29_12_01_01" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="24391824-1ba4-4f5b-9c06-ac1e16bee097" testId="1794cfe2-6c7d-f91e-e2f8-cabdf52f1cd6" testName="CMS.FunctionalTests.CMSScenario.Get_basket_and_response_ok_status_code" computerName="e706f47df924" duration="00:00:01.5623525" startTime="2021-06-29T12:01:01.7726423+00:00" endTime="2021-06-29T12:01:01.7726748+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="24391824-1ba4-4f5b-9c06-ac1e16bee097" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CMS.FunctionalTests.CMSScenario.Get_basket_and_response_ok_status_code" storage="/src/services/CMS/CMS.functionaltests/bin/debug/netcoreapp3.1/CMS.functionaltests.dll" id="1794cfe2-6c7d-f91e-e2f8-cabdf52f1cd6">
+      <Execution id="24391824-1ba4-4f5b-9c06-ac1e16bee097" />
+      <TestMethod codeBase="/src/Services/CMS/CMS.FunctionalTests/bin/Debug/netcoreapp3.1/CMS.FunctionalTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CMS.FunctionalTests.CMSScenario" name="Get_basket_and_response_ok_status_code" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="1794cfe2-6c7d-f91e-e2f8-cabdf52f1cd6" executionId="24391824-1ba4-4f5b-9c06-ac1e16bee097" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="1" executed="1" passed="1" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.4.1 (64-bit .NET Core 3.1.16)
+[xUnit.net 00:00:03.75]   Discovering: CMS.FunctionalTests
+[xUnit.net 00:00:03.81]   Discovered:  CMS.FunctionalTests
+[xUnit.net 00:00:03.81]   Starting:    CMS.FunctionalTests
+[xUnit.net 00:00:05.49]   Finished:    CMS.FunctionalTests
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
