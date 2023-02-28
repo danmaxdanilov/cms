@@ -16,6 +16,9 @@
         <PackageReference Include="Serilog.Sinks.Console" Version="4.1.1-dev-00896" />
         <PackageReference Include="Serilog.Sinks.Http" Version="8.0.0" />
         <PackageReference Include="Serilog.Sinks.Seq" Version="5.2.3-dev-00260" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.1.10" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.1.10" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.10" />
     </ItemGroup>
 
     <ItemGroup>
@@ -29,6 +32,10 @@
       <None Update="appsettings.json">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="IntegrationsEvents\Handlers" />
     </ItemGroup>
 
 </Project>

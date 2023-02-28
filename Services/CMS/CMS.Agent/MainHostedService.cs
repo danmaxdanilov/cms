@@ -1,5 +1,8 @@
+using CMS.Agent.Repositories;
+using CMS.Agent.Utils;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -10,21 +13,27 @@ public class MainHostedService : IHostedService
     private readonly ILogger<MainHostedService> _logger;
     private readonly string _topic;
     private readonly IConsumer<Null, string> _kafkaConsumer;
+    private readonly IFileRepository _repository;
+    private readonly IServiceProvider _provider;
 
     public MainHostedService(
         IConfiguration config,
         ILogger<MainHostedService> logger,
+        IFileRepository repository,
+        IServiceProvider provider,
         IHostApplicationLifetime applicationLifetime)
     {
         _logger = logger;
+        _provider = provider;
 
-        var consumerConfig = new ConsumerConfig();
-        config.GetSection("Kafka:ConsumerSettings").Bind(consumerConfig);
-        consumerConfig.AutoOffsetReset = AutoOffsetReset.Latest;
-        _topic = config.GetValue<string>("Kafka:FrivolousTopic");
-        _kafkaConsumer = new ConsumerBuilder<Null, string>(consumerConfig).Build();
-       
+        //var consumerConfig = new ConsumerConfig();
+        //config.GetSection("Kafka:ConsumerSettings").Bind(consumerConfig);
+        //consumerConfig.AutoOffsetReset = AutoOffsetReset.Latest;
+        //_topic = config.GetValue<string>("Kafka:FrivolousTopic");
+        //_kafkaConsumer = new ConsumerBuilder<Null, string>(consumerConfig).Build();
 
+        _repository = repository;
+        
         // applicationLifetime.ApplicationStarted.Register(OnStarted);
         // applicationLifetime.ApplicationStopping.Register(OnStopping);
         // applicationLifetime.ApplicationStopped.Register(OnStopped);
@@ -34,7 +43,9 @@ public class MainHostedService : IHostedService
     {
         _logger.LogInformation("1. StartAsync has been called.");
 
-        await StartConsumerLoop(cancellationToken);
+        await ApplyDataSchemaAsync(cancellationToken);
+        
+        //await StartConsumerLoop(cancellationToken);
 
         //return Task.CompletedTask;
     }
@@ -62,6 +73,12 @@ public class MainHostedService : IHostedService
     private void OnStopped()
     {
         _logger.LogInformation("5. OnStopped has been called.");
+    }
+    
+    private async Task ApplyDataSchemaAsync(CancellationToken stoppingToken)
+    {
+        var ctx = _provider.GetRequiredService<LiteDataContext>();
+        await ctx.Database.EnsureCreatedAsync(stoppingToken);
     }
     
     private async Task StartConsumerLoop(CancellationToken cancellationToken)
