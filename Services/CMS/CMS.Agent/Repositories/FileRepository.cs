@@ -5,7 +5,6 @@ namespace CMS.Agent.Repositories;
 public interface IFileRepository
 {
     Task<string> CopyNewEntryAsync(string source, string destination);
-
     void InitDirectories();
     void ShutDownDirectories();
 }
@@ -33,25 +32,21 @@ public class FileRepository : IFileRepository
             throw new ArgumentException("Can't be empty string and should be UNC path string", nameof(source));
         
         var destinationDir = Path.GetDirectoryName(repositoryDestination);
-        if (Directory.Exists(destinationDir))
-            throw new FileLoadException(string.Format("Output directory already exists \"{0}\"", destinationDir));
+        /*if (Directory.Exists(destinationDir))
+            throw new FileLoadException(string.Format("Output directory already exists \"{0}\"", destinationDir));*/
         if (File.Exists(repositoryDestination))
             throw new FileLoadException(string.Format("Output file already exists \"{0}\"", Path.GetFileName(destinationDir)));
-        
-        Directory.CreateDirectory(destinationDir);
+        if (!Directory.Exists(destinationDir))
+            Directory.CreateDirectory(destinationDir);
         await CopyFileAsync(importSource, repositoryDestination);
         return repositoryDestination;
     }
     
     private async Task CopyFileAsync(string sourcePath, string destinationPath)
     {
-        using (Stream source = File.Open(sourcePath, FileMode.Create))
-        {
-            using(Stream destination = File.Create(destinationPath))
-            {
-                await source.CopyToAsync(destination);
-            }
-        }
+        await using Stream source = File.Open(sourcePath, FileMode.Open);
+        await using Stream destination = File.Create(destinationPath);
+        await source.CopyToAsync(destination);
     }
     
     public void InitDirectories()

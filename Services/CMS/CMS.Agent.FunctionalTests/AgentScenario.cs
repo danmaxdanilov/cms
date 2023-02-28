@@ -26,7 +26,8 @@ public class AgentScenario : AgentScenarioBase
             {
                 Name = "mc",
                 Version = "1.0",
-                Path = ""
+                Path = "",
+                PlistPath = ""
             };
             await repository.Add(fakeEntry);
             
@@ -52,6 +53,7 @@ public class AgentScenario : AgentScenarioBase
             repository.InitDirectories();
 
             await File.WriteAllTextAsync(Path.Combine("import", "mc.pkg"), "very interesting magic string");
+            await File.WriteAllTextAsync(Path.Combine("import", "mc.plist"), "very interesting magic config string");
 
             var service = server.Host.Services.GetRequiredService<IEntrySevice>();
 
@@ -59,7 +61,8 @@ public class AgentScenario : AgentScenarioBase
             {
                 PackageName = "mc",
                 PackageVersion = "1.28",
-                FileName = "mc.pkg"
+                PackageFileName = "mc.pkg",
+                PlistFileName = "mc.plist"
             };
             await service.AddNewEntry(fakeEntry);
             
@@ -67,11 +70,16 @@ public class AgentScenario : AgentScenarioBase
             var result = await ctx.EntryPackages.FirstOrDefaultAsync(x => x.Name == fakeEntry.PackageName);
             Assert.NotNull(result);
             Assert.Equal(fakeEntry.PackageVersion, result.Version);
+            
             var expectedPath = @"repository\mc@1.28\mc.pkg";
             Assert.Equal(expectedPath, result.Path);
             Assert.True(File.Exists(expectedPath));
             
-            repository.ShutDownDirectories();
+            var expectedPlistPath = @"repository\mc@1.28\mc.plist";
+            Assert.Equal(expectedPlistPath, result.PlistPath);
+            Assert.True(File.Exists(expectedPlistPath));
+            
+            //repository.ShutDownDirectories();
         }
     }
 }

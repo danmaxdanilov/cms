@@ -18,4 +18,7 @@ public class EntryPackage
     
     [Column("PATH", TypeName = "TEXT")]
     public string Path { get; set; }
+    
+    [Column("PLIST_PATH", TypeName = "TEXT")]
+    public string PlistPath { get; set; }
 }

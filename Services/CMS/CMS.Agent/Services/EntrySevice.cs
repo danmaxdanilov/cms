@@ -29,15 +29,21 @@ public class EntrySevice : IEntrySevice
     public async Task AddNewEntry(AddEntry newEntry)
     {
         var entryPath = await _fileRepository.CopyNewEntryAsync(
-            newEntry.FileName,
-            BuildPath(newEntry.PackageName, newEntry.PackageVersion, newEntry.FileName)
+            newEntry.PackageFileName,
+            BuildPath(newEntry.PackageName, newEntry.PackageVersion, newEntry.PackageFileName)
+        );
+        
+        var plistPath = await _fileRepository.CopyNewEntryAsync(
+            newEntry.PlistFileName,
+            BuildPath(newEntry.PackageName, newEntry.PackageVersion, newEntry.PlistFileName)
         );
         
         var entry = new EntryPackage
         {
             Name = newEntry.PackageName,
             Version = newEntry.PackageVersion,
-            Path = entryPath
+            Path = entryPath,
+            PlistPath = plistPath
         };
         await _entryRepository.Add(entry);
     }
