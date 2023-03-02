@@ -1,7 +1,12 @@
-﻿using CMS.Agent;
+﻿using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using CMS.Agent;
+using CMS.Agent.IntegrationsEvents.Handlers;
 using CMS.Agent.Repositories;
 using CMS.Agent.Services;
 using CMS.Agent.Utils;
+using CMS.Shared.Kafka;
+using CMS.Shared.Kafka.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,11 +39,13 @@ finally
 }
 
 IHost BuildHost(IConfiguration configuration, string[] args) =>
-    Host.CreateDefaultBuilder(args)
+    new HostBuilder()
+        .UseServiceProviderFactory(new AutofacServiceProviderFactory())
         .UseSerilog()
         .UseContentRoot(Directory.GetCurrentDirectory())
         .ConfigureServices((_, services) =>
         {
+            services.AddSingleton<IConfiguration>(configuration);
             services.Configure<AgentSettings>(configuration);
             
             var connectionString = configuration["SqLiteConnectionString"];
@@ -55,7 +62,13 @@ IHost BuildHost(IConfiguration configuration, string[] args) =>
             
             services.AddTransient<IEntrySevice, EntrySevice>();
             
-            services.AddHostedService<MainHostedService>();
+            var container = new ContainerBuilder();
+            container.Populate(services);
+            container.AddKafka(configuration["Kafka:BootstrapServers"], configuration["Kafka:GroupId"]);
+            container.AddConsumerHandler<string, AddEntry>();
+            container.Build();
+            
+            services.AddHostedService<AddEntryCommandHandler>();
         })
         .Build();
 

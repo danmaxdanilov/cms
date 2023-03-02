@@ -4,9 +4,6 @@ using Autofac;
 using CMS.Shared.Kafka.Events;
 using CMS.Shared.Kafka.Serialization;
 using Confluent.Kafka;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace CMS.Shared.Kafka;
 
@@ -78,37 +75,8 @@ namespace CMS.Shared.Kafka;
         {
             var topicName = TopicNameResolveUtils.ResolveName<TMessageValue>();
             
-            containerBuilder.RegisterConsumerTopic(topicNames);
-        
-            foreach (var handlerArgumentType in handlerArgumentTypes)
-            {
-                var tMessageKey = typeof(Null);
-                var tMessageValue = handlerArgumentType;
-        
-                // Register consumer service for message type
-                var consumerType = typeof(KafkaConsumerWorkerService<,>)
-                    .MakeGenericType(tMessageKey, tMessageValue);
-                containerBuilder
-                    .RegisterType(consumerType)
-                    .As<IHostedService>()
-                    .SingleInstance();
-                
-                // Register consumer service settings for message type
-                var consumerSettingsType = typeof(ConsumerWorkerOptions<,>)
-                    .MakeGenericType(tMessageKey, tMessageValue);
-                var consumerConfigurationSection = configuration.GetSection("ConsumerConcurrency");
-                containerBuilder
-                    .Register(x =>
-                    {
-                        var parallelDegree =
-                            consumerConfigurationSection.GetValue($"{tMessageKey.Name}_{tMessageValue.Name}", 
-                                consumerConfigurationSection.GetValue("Default", 20));
-                        return Activator.CreateInstance(consumerSettingsType, parallelDegree, parallelDegree);
-                    })
-                    .As(consumerSettingsType)
-                    .SingleInstance();
-            }
-        
+            containerBuilder.RegisterConsumerTopic(topicName);
+
             return containerBuilder;
         }
         
@@ -119,60 +87,11 @@ namespace CMS.Shared.Kafka;
                 using var scope = x.BeginLifetimeScope();
                 var adminClient = x.Resolve<IAdminClient>();
                 var partitionCount = numPartitions;
-                var logger = x.Resolve<ILogger>();
         
                 var (isSuccess, message) = adminClient.TryCreateKafkaTopicAsync(topicName, partitionCount)
                     .ConfigureAwait(false)
                     .GetAwaiter()
                     .GetResult();
-        
-                if (isSuccess)
-                    logger.LogInformation(message);
-                else
-                    logger.LogWarning(message);
             });
         }
-
-        // public static ContainerBuilder BindConsumerHandlers(
-        //     this ContainerBuilder containerBuilder,
-        //     Type[] handlerArgumentTypes, 
-        //     IConfiguration configuration)
-        // {
-        //     var topicNames = handlerArgumentTypes
-        //         .Select(TopicNameResolveUtils.ResolveName)
-        //         .ToArray();
-        //     
-        //     containerBuilder.RegisterConsumerTopics(topicNames);
-        //
-        //     foreach (var handlerArgumentType in handlerArgumentTypes)
-        //     {
-        //         var tMessageKey = typeof(Null);
-        //         var tMessageValue = handlerArgumentType;
-        //
-        //         // Register consumer service for message type
-        //         var consumerType = typeof(KafkaConsumerWorkerService<,>)
-        //             .MakeGenericType(tMessageKey, tMessageValue);
-        //         containerBuilder
-        //             .RegisterType(consumerType)
-        //             .As<IHostedService>()
-        //             .SingleInstance();
-        //         
-        //         // Register consumer service settings for message type
-        //         var consumerSettingsType = typeof(ConsumerWorkerOptions<,>)
-        //             .MakeGenericType(tMessageKey, tMessageValue);
-        //         var consumerConfigurationSection = configuration.GetSection("ConsumerConcurrency");
-        //         containerBuilder
-        //             .Register(x =>
-        //             {
-        //                 var parallelDegree =
-        //                     consumerConfigurationSection.GetValue($"{tMessageKey.Name}_{tMessageValue.Name}", 
-        //                     consumerConfigurationSection.GetValue("Default", 20));
-        //                 return Activator.CreateInstance(consumerSettingsType, parallelDegree, parallelDegree);
-        //             })
-        //             .As(consumerSettingsType)
-        //             .SingleInstance();
-        //     }
-        //
-        //     return containerBuilder;
-        // }
     }

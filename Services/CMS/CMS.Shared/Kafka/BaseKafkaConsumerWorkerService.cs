@@ -1,28 +1,40 @@
-﻿namespace CMS.Shared.Kafka;
+﻿using System.Net;
+using System.Threading.Tasks.Dataflow;
+using CMS.Shared.Kafka.Events;
+using CMS.Shared.Kafka.Serialization;
+using Confluent.Kafka;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace CMS.Shared.Kafka;
 
     public abstract class BaseKafkaConsumerWorkerService<TMessageKey, TMessageValue> : IHostedService
-        where TMessageValue : BusRecordBase, IConsumerRecord
+        where TMessageValue : IntegrationEvent
     {
         private const string ConfigBlockName = "KafkaConsumer";
         private readonly IConfiguration _configuration;
         private readonly ConsumerConfig _consumerConfig;
-        private readonly ConsumerWorkerOptions<TMessageKey, TMessageValue> _workerOptions;
         private Task _runningTask;
         protected CancellationTokenSource CancellationTokenSource;
 
+        private readonly ILogger _logger;
+
         protected BaseKafkaConsumerWorkerService
         (
-            ConsumerConfig consumerConfig,
             IConfiguration configuration,
-            ILogger logger,
-            ConsumerWorkerOptions<TMessageKey, TMessageValue> workerOptions
+            ILogger logger
         )
         {
-            _consumerConfig = consumerConfig;
             _configuration = configuration;
-            Logger = logger;
-            _workerOptions = workerOptions;
-            _consumerConfig.GroupId = ExploreNewGroup(_consumerConfig.GroupId);
+            _consumerConfig = new ConsumerConfig
+            {
+                BootstrapServers = configuration["Kafka:BootstrapServers"],
+                GroupId = configuration["Kafka:GroupId"],
+                AutoOffsetReset = AutoOffsetReset.Latest,
+                EnableAutoCommit = false
+            };
+            _logger = logger;
         }
 
         protected abstract ActionBlock<TMessageValue> Worker { get; }
@@ -31,7 +43,7 @@
         public virtual Task StartAsync(CancellationToken cancellationToken)
         {
             CancellationTokenSource = new CancellationTokenSource();
-            var deserializer = new ByJsonDeserializer<TMessageValue>();
+            var deserializer = new JsonDeserializer<TMessageValue>();
             var consumer = new ConsumerBuilder<TMessageKey, TMessageValue>(_consumerConfig)
                 .SetValueDeserializer(deserializer)
                 .Build();
@@ -44,10 +56,8 @@
             _runningTask =
                 Task.Factory.StartNew(async () =>
                     {
-                        Logger.LogInformation("Topic: {Topic}. Consuming started. ConsumerGroupId: {GroupId}",
+                        _logger.LogInformation("Topic: {Topic}. Consuming started. ConsumerGroupId: {GroupId}",
                             topicName, _consumerConfig.GroupId);
-                        Logger.LogInformation("Topic: {Topic}. Consuming started. Concurrency degree: {ParallelDegree}",
-                            topicName, _workerOptions.ParallelDegree);
 
                         while (!CancellationTokenSource.IsCancellationRequested)
                         {
@@ -62,13 +72,13 @@
 
                                 if (message.Message?.Value == default)
                                 {
-                                    Logger.LogInformation(
+                                    _logger.LogInformation(
                                         "Topic: {Topic}. Consume iteration: {consumeIteration}. Message.Value is empty",
                                         topicName, consumeIteration);
                                     continue;
                                 }
 
-                                Logger.LogDebug(
+                                _logger.LogDebug(
                                     "Topic: {Topic}. Consume iteration: {consumeIteration}. Offset: {offset}. Consuming succeed!",
                                     topicName, consumeIteration, message.Offset);
 
@@ -76,7 +86,7 @@
 
                                 if (!await Worker.SendAsync(record, CancellationTokenSource.Token))
                                 {
-                                    Logger.LogInformation(
+                                    _logger.LogInformation(
                                         "Topic: {Topic}. Consume iteration: {consumeIteration}. Offset: {offset}. Send async returns false",
                                         topicName, consumeIteration, message.Offset.Value);
 
@@ -87,7 +97,7 @@
                                 if (CancellationTokenSource.Token.IsCancellationRequested)
                                 {
                                     consumer.Commit(message);
-                                    Logger.LogInformation(
+                                    _logger.LogInformation(
                                         "Topic: {Topic}. Consume iteration: {consumeIteration}. Offset: {offset}. Cancel requested",
                                         topicName, consumeIteration, message.Offset.Value);
 
@@ -98,7 +108,7 @@
                             }
                             catch (Exception e)
                             {
-                                Logger.LogError(e, "Topic: {Topic}. Consume iteration: {consumeIteration}. Consume error",
+                                _logger.LogError(e, "Topic: {Topic}. Consume iteration: {consumeIteration}. Consume error",
                                     topicName, consumeIteration);
                                 await Task.Delay(1000, cancellationToken);
                             }
@@ -123,18 +133,6 @@
 
             _runningTask.Dispose();
             _runningTask = null;
-        }
-
-        private static string ExploreNewGroup(string consumerConfigGroupId)
-        {
-            var allowedForAllPostfix = Dns.GetHostName();
-            return (typeof(TMessageValue).GetCustomAttribute<ConsumingAttribute>()?.Mode ?? default) switch
-            {
-                ConsumeMode.SingleConsuming => typeof(TMessageValue).Name + "_SINGLE_CONSUME",
-                ConsumeMode.AllowedForAllInstances => consumerConfigGroupId +
-                                                      $"_{allowedForAllPostfix}",
-                _ => consumerConfigGroupId
-            };
         }
 
         private static int IntParse(string value, int defaultValue)
