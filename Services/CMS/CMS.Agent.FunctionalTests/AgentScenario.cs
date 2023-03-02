@@ -1,9 +1,9 @@
 ﻿using CMS.Agent.FunctionalTests.Base;
-using CMS.Agent.IntegrationsEvents.Events;
 using CMS.Agent.Models.Domain;
 using CMS.Agent.Repositories;
 using CMS.Agent.Services;
 using CMS.Agent.Utils;
+using CMS.Shared.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

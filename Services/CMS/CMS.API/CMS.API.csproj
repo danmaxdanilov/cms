@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Camunda.Api.Client" Version="2.6.0" />
+    <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.0.2" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.9" />
 
     <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="3.0.0" />

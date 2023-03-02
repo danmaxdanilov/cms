@@ -1,15 +1,12 @@
-using CMS.Agent.IntegrationsEvents.Events;
 using CMS.Agent.Repositories;
 using CMS.Agent.Utils;
+using CMS.Shared.Events;
+using CMS.Shared.Kafka.Serialization;
 using Confluent.Kafka;
-using Confluent.Kafka.SyncOverAsync;
-using Confluent.SchemaRegistry;
-using Confluent.SchemaRegistry.Serdes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace CMS.Agent;
 
@@ -37,7 +34,7 @@ public class MainHostedService : IHostedService
         _topic = config.GetValue<string>("Kafka:FrivolousTopic");
         _kafkaConsumer = new ConsumerBuilder<string, AddEntry>(consumerConfig)
             .SetKeyDeserializer(Deserializers.Utf8)
-            .SetValueDeserializer(new JsonDeserializer<AddEntry>().AsSyncOverAsync())
+            .SetValueDeserializer(new JsonDeserializer<AddEntry>())
             .SetErrorHandler((_, e) => Console.WriteLine($"Error: {e.Reason}"))
             .Build();
 
