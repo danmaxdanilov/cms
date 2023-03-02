@@ -1,6 +1,6 @@
 using CMS.Agent.Repositories;
 using CMS.Agent.Utils;
-using CMS.Shared.Events;
+using CMS.Shared.Kafka.Events;
 using CMS.Shared.Kafka.Serialization;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
@@ -100,7 +100,7 @@ public class MainHostedService : IHostedService
                 var entry = cr.Message.Value;
                 // Handle message...
                 Console.WriteLine($"{cr.Message.Key}: {cr.Message.Value}");
-                _logger.LogInformation(string.Format("id: {0}, name: {1}", entry.Id, entry.PackageName));
+                _logger.LogInformation(string.Format("id: {0}, name: {1}", entry.TaskId, entry.PackageName));
             }
             catch (OperationCanceledException)
             {

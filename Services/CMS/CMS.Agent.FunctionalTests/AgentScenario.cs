@@ -3,7 +3,7 @@ using CMS.Agent.Models.Domain;
 using CMS.Agent.Repositories;
 using CMS.Agent.Services;
 using CMS.Agent.Utils;
-using CMS.Shared.Events;
+using CMS.Shared.Kafka.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

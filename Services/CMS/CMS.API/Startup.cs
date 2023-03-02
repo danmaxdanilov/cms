@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using CMS.Shared.Kafka;
+using CMS.Shared.Kafka.Events;
 using Confluent.Kafka;
 
 namespace CMS.API
@@ -42,10 +43,6 @@ namespace CMS.API
             {
                 options.EnableDetailedErrors = true;
             });
-            
-            services.AddSingleton<KafkaClientHandle>(sp => 
-                new KafkaClientHandle(Configuration.GetValue<string>("Kafka:ProducerSettings:BootstrapServers")));
-            services.AddSingleton<KafkaProducer<Null, string>>();
 
             services.AddControllers(options =>
             {
@@ -108,6 +105,8 @@ namespace CMS.API
             services.AddOptions();
 
             var container = new ContainerBuilder();
+            container.AddKafka(Configuration["Kafka:BootstrapServers"], Configuration["Kafka:GroupId"]);
+            container.AddKafkaProducer<string, AddEntry>();
             container.Populate(services);
 
             return new AutofacServiceProvider(container.Build());

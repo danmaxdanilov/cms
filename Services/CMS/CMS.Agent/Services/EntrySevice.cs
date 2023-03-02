@@ -1,6 +1,6 @@
 ﻿using CMS.Agent.Models.Domain;
 using CMS.Agent.Repositories;
-using CMS.Shared.Events;
+using CMS.Shared.Kafka.Events;
 using Microsoft.Extensions.Logging;
 
 namespace CMS.Agent.Services;

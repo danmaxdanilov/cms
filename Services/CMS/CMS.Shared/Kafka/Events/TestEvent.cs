@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace CMS.Shared.Events;
+namespace CMS.Shared.Kafka.Events;
 
 public class TestEvent
 {

@@ -1,8 +1,9 @@
 using System.Net;
 using System.Text.Unicode;
+using System.Threading;
 using System.Threading.Tasks;
-using CMS.Shared.Events;
 using CMS.Shared.Kafka;
+using CMS.Shared.Kafka.Events;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
@@ -19,20 +20,24 @@ public class KafkaController : Controller
 {
 
         private string _topic;
-        private readonly KafkaProducer<Null, string> _producer;
         private readonly ILogger<KafkaController> _logger;
 
         private readonly ProducerConfig _producerConfig;
-        
+        private readonly IKafkaSink<string, AddEntry> _sink;
+
         // GET: /<controller>/
-        public KafkaController(IConfiguration config, KafkaProducer<Null, string> producer, ILogger<KafkaController> logger)
+        public KafkaController(
+            IConfiguration config, 
+            IKafkaSink<string,AddEntry> sink,
+            ILogger<KafkaController> logger)
         {
-            _topic = config.GetValue<string>("Kafka:FrivolousTopic");;
-            _producer = producer;
+            _topic = config.GetValue<string>("Kafka:FrivolousTopic");
             _logger = logger;
             
             _producerConfig = new ProducerConfig();
             config.GetSection("Kafka:ProducerSettings").Bind(_producerConfig);
+
+            _sink = sink;
         }
             
         //[HttpGet]
@@ -44,9 +49,25 @@ public class KafkaController : Controller
         //     return Ok();
         // }
         
+         [HttpGet("sink")]
+         [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]
+         public async Task<IActionResult> ProduceMessage()
+         {
+             var entry = new AddEntry
+             {
+                 TaskId = "id#323",
+                 PackageName = "mc111",
+                 PackageVersion = "1.29-1",
+                 PackageFileName = "mc.pkg",
+                 PlistFileName = "mc.plist"
+             };
+             await _sink.SendAsync("message_key#17", entry, CancellationToken.None);
+             return Ok();
+         }
+        
         [HttpGet]
         [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]
-        public async Task<IActionResult> ProduceCustonMessage()
+        public async Task<IActionResult> ProduceCustomMessage()
         {
             using (var producer =
                    new ProducerBuilder<string, AddEntry>(_producerConfig)
@@ -56,7 +77,7 @@ public class KafkaController : Controller
                 _logger.LogInformation($"{producer.Name} producing on {_topic}");
                 var entry = new AddEntry
                 {
-                    Id = "id#3",
+                    TaskId = "id#3",
                     PackageName = "mc",
                     PackageVersion = "1.29",
                     PackageFileName = "mc.pkg",
