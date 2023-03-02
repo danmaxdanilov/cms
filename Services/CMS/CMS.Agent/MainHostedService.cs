@@ -1,10 +1,15 @@
+using CMS.Agent.IntegrationsEvents.Events;
 using CMS.Agent.Repositories;
 using CMS.Agent.Utils;
 using Confluent.Kafka;
+using Confluent.Kafka.SyncOverAsync;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace CMS.Agent;
 
@@ -12,7 +17,7 @@ public class MainHostedService : IHostedService
 {
     private readonly ILogger<MainHostedService> _logger;
     private readonly string _topic;
-    private readonly IConsumer<Null, string> _kafkaConsumer;
+    private readonly IConsumer<string, AddEntry> _kafkaConsumer;
     private readonly IFileRepository _repository;
     private readonly IServiceProvider _provider;
 
@@ -26,11 +31,15 @@ public class MainHostedService : IHostedService
         _logger = logger;
         _provider = provider;
 
-        //var consumerConfig = new ConsumerConfig();
-        //config.GetSection("Kafka:ConsumerSettings").Bind(consumerConfig);
-        //consumerConfig.AutoOffsetReset = AutoOffsetReset.Latest;
-        //_topic = config.GetValue<string>("Kafka:FrivolousTopic");
-        //_kafkaConsumer = new ConsumerBuilder<Null, string>(consumerConfig).Build();
+        var consumerConfig = new ConsumerConfig();
+        config.GetSection("Kafka:ConsumerSettings").Bind(consumerConfig);
+        consumerConfig.AutoOffsetReset = AutoOffsetReset.Latest;
+        _topic = config.GetValue<string>("Kafka:FrivolousTopic");
+        _kafkaConsumer = new ConsumerBuilder<string, AddEntry>(consumerConfig)
+            .SetKeyDeserializer(Deserializers.Utf8)
+            .SetValueDeserializer(new JsonDeserializer<AddEntry>().AsSyncOverAsync())
+            .SetErrorHandler((_, e) => Console.WriteLine($"Error: {e.Reason}"))
+            .Build();
 
         _repository = repository;
         
@@ -45,7 +54,7 @@ public class MainHostedService : IHostedService
 
         await ApplyDataSchemaAsync(cancellationToken);
         
-        //await StartConsumerLoop(cancellationToken);
+        await StartConsumerLoop(cancellationToken);
 
         //return Task.CompletedTask;
     }
@@ -83,16 +92,18 @@ public class MainHostedService : IHostedService
     
     private async Task StartConsumerLoop(CancellationToken cancellationToken)
     {
-        _kafkaConsumer.Subscribe(this._topic);
+        _kafkaConsumer.Subscribe(_topic);
 
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var cr = this._kafkaConsumer.Consume(cancellationToken);
+                var cr = _kafkaConsumer.Consume(cancellationToken);
 
+                var entry = cr.Message.Value;
                 // Handle message...
-                Console.WriteLine($"{cr.Message.Key}: {cr.Message.Value}ms");
+                Console.WriteLine($"{cr.Message.Key}: {cr.Message.Value}");
+                _logger.LogInformation(string.Format("id: {0}, name: {1}", entry.Id, entry.PackageName));
             }
             catch (OperationCanceledException)
             {
