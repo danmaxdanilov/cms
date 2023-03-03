@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using Autofac;
-using CMS.Shared.Kafka.Events;
+using CMS.Shared.Kafka.Commands;
 using Confluent.Kafka;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace CMS.Shared.Kafka;
 
 public interface IKafkaSink<TMessageKey, TMessageValue>
-    where TMessageValue : IntegrationEvent
+    where TMessageValue : IntegrationCommand
 {
     Task SendAsync(TMessageValue record, CancellationToken cancellationToken);
     Task SendAsync(TMessageKey key, TMessageValue record, CancellationToken cancellationToken);
@@ -20,22 +20,18 @@ public interface IKafkaSink<TMessageKey, TMessageValue>
 }
 
 public class KafkaProducerSink<TMessageKey, TMessageValue> : IKafkaSink<TMessageKey, TMessageValue>, IDisposable
-    where TMessageValue : IntegrationEvent
+    where TMessageValue : IntegrationCommand
 {
     private static readonly string TopicName = TopicNameResolveUtils.ResolveName<TMessageValue>();
-    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<TMessageValue> _logger;
     private readonly IProducer<TMessageKey, TMessageValue> _producer;
-    private readonly ILifetimeScope _scope;
 
 
-    public KafkaProducerSink(IProducer<TMessageKey, TMessageValue> producer, ILifetimeScope scope,
-        ILogger<TMessageValue> logger, IHttpContextAccessor httpContextAccessor)
+    public KafkaProducerSink(IProducer<TMessageKey, TMessageValue> producer,
+        ILogger<TMessageValue> logger)
     {
         _producer = producer;
-        _scope = scope;
         _logger = logger;
-        _httpContextAccessor = httpContextAccessor;
     }
 
     public void Dispose()

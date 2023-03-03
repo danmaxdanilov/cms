@@ -3,7 +3,7 @@ using CMS.Agent.Models.Domain;
 using CMS.Agent.Repositories;
 using CMS.Agent.Services;
 using CMS.Agent.Utils;
-using CMS.Shared.Kafka.Events;
+using CMS.Shared.Kafka.Commands;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -57,7 +57,7 @@ public class AgentScenario : AgentScenarioBase
 
             var service = server.Host.Services.GetRequiredService<IEntrySevice>();
 
-            var fakeEntry = new AddEntry
+            var fakeEntry = new AddEntryCommand
             {
                 PackageName = "mc",
                 PackageVersion = "1.28",
@@ -71,15 +71,15 @@ public class AgentScenario : AgentScenarioBase
             Assert.NotNull(result);
             Assert.Equal(fakeEntry.PackageVersion, result.Version);
             
-            var expectedPath = @"repository\mc@1.28\mc.pkg";
+            var expectedPath = Path.Combine("repository","mc@1.28","mc.pkg");
             Assert.Equal(expectedPath, result.Path);
             Assert.True(File.Exists(expectedPath));
             
-            var expectedPlistPath = @"repository\mc@1.28\mc.plist";
+            var expectedPlistPath = Path.Combine("repository","mc@1.28","mc.plist");
             Assert.Equal(expectedPlistPath, result.PlistPath);
             Assert.True(File.Exists(expectedPlistPath));
             
-            //repository.ShutDownDirectories();
+            repository.ShutDownDirectories();
         }
     }
 }

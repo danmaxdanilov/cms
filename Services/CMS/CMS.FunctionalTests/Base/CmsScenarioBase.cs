@@ -1,14 +1,17 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using System;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using System.IO;
 using System.Reflection;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace CMS.FunctionalTests.Base
 {
     public class CMSScenarioBase
     {
-        private const string ApiUrlBase = "api/v1/CMS";
+        private const string ApiUrlBase = "api/v1";
 
         public TestServer CreateServer()
         {
@@ -28,15 +31,19 @@ namespace CMS.FunctionalTests.Base
 
         public static class Get
         {
-            public static string GetTestNumber()
+            public static string GetEntryList(Dictionary<string,string> @params)
             {
-                return $"{ApiUrlBase}";
+                return QueryHelpers.AddQueryString($"{ApiUrlBase}/entry/list?", @params);
             }
         }
 
         public static class Post
         {
-            public static string CMS = $"{ApiUrlBase}/";
+        }
+        
+        public static class Put
+        {
+            public static string AddEntry = $"{ApiUrlBase}/entry/add";
         }
     }
 }

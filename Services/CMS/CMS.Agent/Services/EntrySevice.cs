@@ -1,13 +1,13 @@
 ﻿using CMS.Agent.Models.Domain;
 using CMS.Agent.Repositories;
-using CMS.Shared.Kafka.Events;
+using CMS.Shared.Kafka.Commands;
 using Microsoft.Extensions.Logging;
 
 namespace CMS.Agent.Services;
 
 public interface IEntrySevice
 {
-    Task AddNewEntry(AddEntry newEntry);
+    Task AddNewEntry(AddEntryCommand newEntry);
 }
 
 public class EntrySevice : IEntrySevice
@@ -26,7 +26,7 @@ public class EntrySevice : IEntrySevice
         _entryRepository = entryRepository;
     }
     
-    public async Task AddNewEntry(AddEntry newEntry)
+    public async Task AddNewEntry(AddEntryCommand newEntry)
     {
         var entryPath = await _fileRepository.CopyNewEntryAsync(
             newEntry.PackageFileName,

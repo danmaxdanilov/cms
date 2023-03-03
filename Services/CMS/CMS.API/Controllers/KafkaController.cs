@@ -1,12 +1,9 @@
 using System.Net;
-using System.Text.Unicode;
 using System.Threading;
 using System.Threading.Tasks;
 using CMS.Shared.Kafka;
-using CMS.Shared.Kafka.Events;
+using CMS.Shared.Kafka.Commands;
 using Confluent.Kafka;
-using Confluent.SchemaRegistry;
-using Confluent.SchemaRegistry.Serdes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -23,12 +20,12 @@ public class KafkaController : Controller
         private readonly ILogger<KafkaController> _logger;
 
         private readonly ProducerConfig _producerConfig;
-        private readonly IKafkaSink<string, AddEntry> _sink;
+        private readonly IKafkaSink<string, AddEntryCommand> _sink;
 
         // GET: /<controller>/
         public KafkaController(
             IConfiguration config, 
-            IKafkaSink<string,AddEntry> sink,
+            IKafkaSink<string,AddEntryCommand> sink,
             ILogger<KafkaController> logger)
         {
             _topic = config.GetValue<string>("Kafka:FrivolousTopic");
@@ -53,9 +50,9 @@ public class KafkaController : Controller
          [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]
          public async Task<IActionResult> ProduceMessage()
          {
-             var entry = new AddEntry
+             var entry = new AddEntryCommand
              {
-                 TaskId = "id#323",
+                 EntryId = "id#323",
                  PackageName = "mc111",
                  PackageVersion = "1.29-1",
                  PackageFileName = "mc.pkg",
@@ -70,21 +67,21 @@ public class KafkaController : Controller
         public async Task<IActionResult> ProduceCustomMessage()
         {
             using (var producer =
-                   new ProducerBuilder<string, AddEntry>(_producerConfig)
-                       .SetValueSerializer(new Shared.Kafka.Serialization.JsonSerializer<AddEntry>())
+                   new ProducerBuilder<string, AddEntryCommand>(_producerConfig)
+                       .SetValueSerializer(new Shared.Kafka.Serialization.JsonSerializer<AddEntryCommand>())
                        .Build())
             {
                 _logger.LogInformation($"{producer.Name} producing on {_topic}");
-                var entry = new AddEntry
+                var entry = new AddEntryCommand
                 {
-                    TaskId = "id#3",
+                    EntryId = "id#3",
                     PackageName = "mc",
                     PackageVersion = "1.29",
                     PackageFileName = "mc.pkg",
                     PlistFileName = "mc.plist"
                 };
 
-                await producer.ProduceAsync(_topic, new Message<string, AddEntry> { Value = entry });
+                await producer.ProduceAsync(_topic, new Message<string, AddEntryCommand> { Value = entry });
             }
             return Ok();
         }

@@ -1,11 +1,11 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace CMS.Shared.Kafka.Events;
+namespace CMS.Shared.Kafka.Commands;
 
-public class AddEntry : IntegrationEvent
+public class AddEntryCommand : IntegrationCommand
 {
-    [JsonPropertyName("task-id")]
-    public string TaskId { get; set; }
+    [JsonPropertyName("entry-id")]
+    public string EntryId { get; set; }
     
     [JsonPropertyName("package-name")]
     public string PackageName { get; set; }

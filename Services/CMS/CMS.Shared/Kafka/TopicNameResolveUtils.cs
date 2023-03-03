@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using CMS.Shared.Kafka.Events;
+using CMS.Shared.Kafka.Commands;
 
 namespace CMS.Shared.Kafka;
 
 public static class TopicNameResolveUtils
 {
-    public static string ResolveName<TMessageValue>() where TMessageValue : IntegrationEvent
+    public static string ResolveName<TMessageValue>() where TMessageValue : IntegrationCommand
     {
         return $"{typeof(TMessageValue).Name}Topic";
     }

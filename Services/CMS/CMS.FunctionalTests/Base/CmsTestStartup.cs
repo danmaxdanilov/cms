@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using CMS.Shared.Kafka;
+using CMS.Shared.Kafka.Commands;
 
 namespace CMS.FunctionalTests.Base
 {
@@ -13,12 +15,12 @@ namespace CMS.FunctionalTests.Base
         {
         }
 
-        public override IServiceProvider ConfigureServices(IServiceCollection services)
+        public override void ConfigureServices(IServiceCollection services)
         {
             // Added to avoid the Authorize data annotation in test environment. 
             // Property "SuppressCheckForUnhandledSecurityMetadata" in appsettings.json
             services.Configure<RouteOptions>(Configuration);
-            return base.ConfigureServices(services);
+            base.ConfigureServices(services);
         }
 
         protected override void ConfigureAuth(IApplicationBuilder app)
@@ -31,6 +33,14 @@ namespace CMS.FunctionalTests.Base
             {
                 base.ConfigureAuth(app);
             }
+        }
+
+        protected override void ConfigureKafka(IServiceCollection serviceCollection)
+        {
+            //disable kafka for tests
+            serviceCollection.AddKafka(Configuration["Kafka:BootstrapServers"], Configuration["Kafka:GroupId"]);
+            serviceCollection.AddKafkaProducer<string, AddEntryCommand>();
+            //base.ConfigureKafka(serviceCollection);
         }
     }
 }

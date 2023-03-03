@@ -1,9 +1,10 @@
 using System.Net;
 using System.Reflection;
 using Autofac;
-using CMS.Shared.Kafka.Events;
+using CMS.Shared.Kafka.Commands;
 using CMS.Shared.Kafka.Serialization;
 using Confluent.Kafka;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CMS.Shared.Kafka;
 
@@ -46,7 +47,7 @@ namespace CMS.Shared.Kafka;
 
         public static ContainerBuilder AddKafkaProducer<TMessageKey, TMessageValue>(
             this ContainerBuilder containerBuilder, ProducerConfig config = default)
-            where TMessageValue : IntegrationEvent
+            where TMessageValue : IntegrationCommand
         {
             containerBuilder.Register(x =>
             {
@@ -71,7 +72,7 @@ namespace CMS.Shared.Kafka;
 
         public static ContainerBuilder AddConsumerHandler<TMessageKey, TMessageValue>(
             this ContainerBuilder containerBuilder)
-            where TMessageValue : IntegrationEvent
+            where TMessageValue : IntegrationCommand
         {
             var topicName = TopicNameResolveUtils.ResolveName<TMessageValue>();
             
@@ -94,4 +95,75 @@ namespace CMS.Shared.Kafka;
                     .GetResult();
             });
         }
+
+        #region IServiceProvider
+
+        
+        public static IServiceCollection AddKafka(this IServiceCollection services,
+            string kafkaHost,
+            string groupId)
+        {
+            var kafkaConsumerConfig = new ConsumerConfig
+            {
+                BootstrapServers = kafkaHost,
+                GroupId = groupId ?? Assembly.GetEntryAssembly()?.GetName().Name ?? Dns.GetHostName(),
+                AutoOffsetReset = AutoOffsetReset.Earliest
+            };
+                
+            var kafkaProducerConfig = new ProducerConfig
+            {
+                BootstrapServers = kafkaHost,
+                ClientId = Dns.GetHostName()
+            };
+
+            var kafkaAdminConfig = new AdminClientConfig
+            {
+                BootstrapServers = kafkaHost
+            };
+            
+            SetUpCluster(services, kafkaProducerConfig, kafkaAdminConfig,
+                () => new ConsumerConfig
+                {
+                    BootstrapServers = kafkaHost,
+                    GroupId = groupId ?? Assembly.GetEntryAssembly()?.GetName().Name ?? Dns.GetHostName(),
+                    AutoOffsetReset = AutoOffsetReset.Earliest
+                }
+            );
+
+            return services;
+        }
+        
+        private static void SetUpCluster(IServiceCollection services, ProducerConfig kafkaProducerConfig,
+            AdminClientConfig kafkaAdminConfig, Func<ConsumerConfig> consumerConfigFactory)
+        {
+            services.AddScoped(x => consumerConfigFactory.Invoke());
+            services.AddSingleton(kafkaProducerConfig);
+            services.AddSingleton<IAdminClient>(x => new AdminClientBuilder(kafkaAdminConfig).Build());
+        }
+        
+        public static IServiceCollection AddKafkaProducer<TMessageKey, TMessageValue>(
+            this IServiceCollection services, ProducerConfig config = default)
+            where TMessageValue : IntegrationCommand
+        {
+            services.AddSingleton<IProducer<TMessageKey, TMessageValue>>(
+                provider =>
+                {
+                    var adminClient = provider.GetRequiredService<IAdminClient>();
+
+                    adminClient.TryCreateKafkaTopicAsync(
+                        TopicNameResolveUtils.ResolveName<TMessageValue>()
+                    ).GetAwaiter().GetResult();
+
+                    return new ProducerBuilder<TMessageKey, TMessageValue>(config ?? provider.GetRequiredService<ProducerConfig>())
+                        .SetValueSerializer(new JsonSerializer<TMessageValue>())
+                        .Build();
+                });
+
+            services
+                .AddSingleton<IKafkaSink<TMessageKey, TMessageValue>, KafkaProducerSink<TMessageKey, TMessageValue>>();
+
+            return services;
+        }
+
+        #endregion
     }

@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Threading.Tasks.Dataflow;
-using CMS.Shared.Kafka.Events;
+using CMS.Shared.Kafka.Commands;
 using CMS.Shared.Kafka.Serialization;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
@@ -10,11 +10,12 @@ using Microsoft.Extensions.Logging;
 namespace CMS.Shared.Kafka;
 
     public abstract class BaseKafkaConsumerWorkerService<TMessageKey, TMessageValue> : IHostedService
-        where TMessageValue : IntegrationEvent
+        where TMessageValue : IntegrationCommand
     {
         private const string ConfigBlockName = "KafkaConsumer";
         private readonly IConfiguration _configuration;
         private readonly ConsumerConfig _consumerConfig;
+        private readonly IAdminClient _adminClient;
         private Task _runningTask;
         protected CancellationTokenSource CancellationTokenSource;
 
@@ -23,6 +24,7 @@ namespace CMS.Shared.Kafka;
         protected BaseKafkaConsumerWorkerService
         (
             IConfiguration configuration,
+            IAdminClient adminClient,
             ILogger logger
         )
         {
@@ -35,12 +37,13 @@ namespace CMS.Shared.Kafka;
                 EnableAutoCommit = false
             };
             _logger = logger;
+            _adminClient = adminClient;
         }
 
-        protected abstract ActionBlock<TMessageValue> Worker { get; }
+        protected abstract ActionBlock<Tuple<TMessageKey, TMessageValue>> Worker { get; }
         protected ILogger Logger { get; }
 
-        public virtual Task StartAsync(CancellationToken cancellationToken)
+        public virtual async Task StartAsync(CancellationToken cancellationToken)
         {
             CancellationTokenSource = new CancellationTokenSource();
             var deserializer = new JsonDeserializer<TMessageValue>();
@@ -49,6 +52,9 @@ namespace CMS.Shared.Kafka;
                 .Build();
 
             var topicName = TopicNameResolveUtils.ResolveName<TMessageValue>();
+
+            await EnsureTopicAsync(topicName);
+            
             consumer.Subscribe(new[] {topicName});
 
             var consumeTimeout = GetConfigValue("TimeoutMilliseconds", IntParse, 1000);
@@ -82,7 +88,7 @@ namespace CMS.Shared.Kafka;
                                     "Topic: {Topic}. Consume iteration: {consumeIteration}. Offset: {offset}. Consuming succeed!",
                                     topicName, consumeIteration, message.Offset);
 
-                                var record = message.Message.Value;
+                                var record = Tuple.Create(message.Message.Key,message.Message.Value);
 
                                 if (!await Worker.SendAsync(record, CancellationTokenSource.Token))
                                 {
@@ -122,7 +128,7 @@ namespace CMS.Shared.Kafka;
                     },
                     CancellationTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-            return Task.CompletedTask;
+            //return Task.CompletedTask;
         }
 
         public virtual async Task StopAsync(CancellationToken cancellationToken)
@@ -151,5 +157,11 @@ namespace CMS.Shared.Kafka;
             return value == string.Empty
                 ? defaultValue
                 : parser(value, defaultValue);
+        }
+
+        private async Task<bool> EnsureTopicAsync(string topicName, int numPartitions = 1)
+        {
+            var (isSuccess, message) = await _adminClient.TryCreateKafkaTopicAsync(topicName, numPartitions);
+            return isSuccess;
         }
     }

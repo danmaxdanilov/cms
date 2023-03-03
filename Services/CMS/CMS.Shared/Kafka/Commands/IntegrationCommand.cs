@@ -1,17 +1,17 @@
 using System.Text.Json.Serialization;
 
-namespace CMS.Shared.Kafka.Events;
+namespace CMS.Shared.Kafka.Commands;
 
-public class IntegrationEvent
+public class IntegrationCommand
 {
-    public IntegrationEvent()
+    public IntegrationCommand()
     {
         Id = Guid.NewGuid();
         CreationDate = DateTime.UtcNow;
     }
 
     [JsonConstructor]
-    public IntegrationEvent(Guid id, DateTime createDate)
+    public IntegrationCommand(Guid id, DateTime createDate)
     {
         Id = id;
         CreationDate = createDate;

@@ -32,4 +32,8 @@
       <Compile Remove="Kafka\BusRecordBase.cs" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Kafka\Models" />
+    </ItemGroup>
+
 </Project>

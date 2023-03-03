@@ -1,15 +1,17 @@
 ﻿using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using CMS.Agent;
-using CMS.Agent.IntegrationsEvents.Handlers;
+using CMS.Agent.CommandHandlers;
 using CMS.Agent.Repositories;
 using CMS.Agent.Services;
 using CMS.Agent.Utils;
 using CMS.Shared.Kafka;
-using CMS.Shared.Kafka.Events;
+using CMS.Shared.Kafka.Commands;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -40,7 +42,7 @@ finally
 
 IHost BuildHost(IConfiguration configuration, string[] args) =>
     new HostBuilder()
-        .UseServiceProviderFactory(new AutofacServiceProviderFactory())
+        //.UseServiceProviderFactory(new AutofacServiceProviderFactory())
         .UseSerilog()
         .UseContentRoot(Directory.GetCurrentDirectory())
         .ConfigureServices((_, services) =>
@@ -61,13 +63,10 @@ IHost BuildHost(IConfiguration configuration, string[] args) =>
             services.AddTransient<IEntryRepository, EntryRepository>();
             
             services.AddTransient<IEntrySevice, EntrySevice>();
-            
-            var container = new ContainerBuilder();
-            container.Populate(services);
-            container.AddKafka(configuration["Kafka:BootstrapServers"], configuration["Kafka:GroupId"]);
-            container.AddConsumerHandler<string, AddEntry>();
-            container.Build();
-            
+
+            services.AddKafka(configuration["Kafka:BootstrapServers"], configuration["Kafka:GroupId"]);
+            services.AddKafkaProducer<string, AddEntryResponseCommand>();
+
             services.AddHostedService<AddEntryCommandHandler>();
         })
         .Build();
@@ -97,6 +96,6 @@ IConfiguration GetConfiguration()
 
 public partial class Program
 {
-    public static string Namespace = typeof(MainHostedService).Namespace;
+    public static string Namespace = typeof(AgentSettings).Namespace;
     public static string AppName = Namespace.Substring(Namespace.LastIndexOf('.', Namespace.LastIndexOf('.') - 1) + 1);
 }

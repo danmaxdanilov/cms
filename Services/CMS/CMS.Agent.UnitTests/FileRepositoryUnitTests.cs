@@ -45,7 +45,7 @@ public class FileRepositoryUnitTests : IDisposable
         //Act & Assert
         var exception = await Assert.ThrowsAsync<FileLoadException>(async () => 
             await _repository.CopyNewEntryAsync(values.Item1, values.Item2));
-        Assert.Contains(fakeDirectory, exception.Message);
+        Assert.Contains(values.Item4, exception.Message);
     }
     
     public void Dispose()

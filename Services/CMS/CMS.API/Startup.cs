@@ -1,7 +1,6 @@
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using CMS.API.Controllers;
-using CMS.API.Grpc;
 using CMS.API.Infrastructure.Filters;
 using CMS.API.Infrastructure.Middlewares;
 using CMS.API.Infrastructure.Repositories;
@@ -20,10 +19,11 @@ using Microsoft.OpenApi.Models;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.IO;
+using AutoMapper;
+using CMS.API.CommandHandlers;
 using CMS.Shared.Kafka;
-using CMS.Shared.Kafka.Events;
-using Confluent.Kafka;
+using CMS.Shared.Kafka.Commands;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace CMS.API
 {
@@ -37,12 +37,9 @@ namespace CMS.API
         public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
-        public virtual IServiceProvider ConfigureServices(IServiceCollection services)
+        public virtual void ConfigureServices(IServiceCollection services)
         {
-            services.AddGrpc(options =>
-            {
-                options.EnableDetailedErrors = true;
-            });
+            services.AddRouting(options => options.LowercaseUrls = true);
 
             services.AddControllers(options =>
             {
@@ -89,6 +86,9 @@ namespace CMS.API
 
             services.Configure<CMSSettings>(Configuration);
 
+            services.AddSingleton<IMapper>(
+                provider => new Mapper(MapperConfig.CreateConfig()));
+
             services.AddCors(options =>
             {
                 options.AddPolicy("CorsPolicy",
@@ -98,18 +98,26 @@ namespace CMS.API
                     .AllowAnyHeader()
                     .AllowCredentials());
             });
+
+            services.AddNpgsql<PgDbContext>(
+                Configuration["ConnectionStrings:PostgreSQL"],
+                opt => opt.MigrationsHistoryTable(HistoryRepository.DefaultTableName, "cms_schema"));
+            
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-            services.AddTransient<ICMSRepository, CMSRepository>();
             services.AddTransient<IIdentityService, IdentityService>();
+            services.AddTransient<IEntryRepository, EntryRepository>();
+            services.AddTransient<ICommandRepository, CommandRepository>();
+            services.AddTransient<IEntryService, EntryService>();
 
             services.AddOptions();
 
-            var container = new ContainerBuilder();
-            container.AddKafka(Configuration["Kafka:BootstrapServers"], Configuration["Kafka:GroupId"]);
-            container.AddKafkaProducer<string, AddEntry>();
-            container.Populate(services);
+            ConfigureKafka(services);
 
-            return new AutofacServiceProvider(container.Build());
+            var container = new ContainerBuilder();
+            //container.AddKafka(Configuration["Kafka:BootstrapServers"], Configuration["Kafka:GroupId"]);
+            //container.AddKafkaProducer<string, AddEntryCommand>();
+            container.Populate(services);
+            container.Build();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -137,23 +145,8 @@ namespace CMS.API
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGrpcService<CMSGrpcService>();
                 endpoints.MapDefaultControllerRoute();
                 endpoints.MapControllers();
-                endpoints.MapGet("/_proto/", async ctx =>
-                {
-                    ctx.Response.ContentType = "text/plain";
-                    using var fs = new FileStream(Path.Combine(env.ContentRootPath, "Proto", "basket.proto"), FileMode.Open, FileAccess.Read);
-                    using var sr = new StreamReader(fs);
-                    while (!sr.EndOfStream)
-                    {
-                        var line = await sr.ReadLineAsync();
-                        if (line != "/* >>" || line != "<< */")
-                        {
-                            await ctx.Response.WriteAsync(line);
-                        }
-                    }
-                });
                 endpoints.MapHealthChecks("/hc", new HealthCheckOptions()
                 {
                     Predicate = _ => true,
@@ -198,6 +191,13 @@ namespace CMS.API
             app.UseAuthentication();
             app.UseAuthorization();
         }
+
+        protected virtual void ConfigureKafka(IServiceCollection services)
+        {
+            services.AddKafka(Configuration["Kafka:BootstrapServers"], Configuration["Kafka:GroupId"]);
+            services.AddKafkaProducer<string, AddEntryCommand>();
+            services.AddHostedService<AddEntryCommandResponseHandler>();
+        }
     }
 
     public static class CustomExtensionMethods
@@ -213,12 +213,7 @@ namespace CMS.API
                     configuration["ConnectionString"],
                     name: "database-check",
                     tags: new string[] { "redis" });
-
-            hcBuilder
-                .AddRabbitMQ(
-                    $"amqp://{configuration["EventBusConnection"]}",
-                    name: "rabbitmq-check",
-                    tags: new string[] { "rabbitmq" });
+            
 
             return services;
         }

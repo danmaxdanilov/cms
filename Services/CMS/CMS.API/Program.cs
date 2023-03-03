@@ -8,6 +8,11 @@ using Serilog;
 using System;
 using System.IO;
 using System.Net;
+using CMS.API.Infrastructure.Repositories;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CMS.API
 {
@@ -27,6 +32,18 @@ namespace CMS.API
                 Log.Information("Configuring web host ({ApplicationContext})...", AppName);
                 var host = BuildWebHost(configuration, args);
 
+                Log.Information("Applying migrations ({ApplicationContext})...", Program.AppName);
+                host.MigrateDbContext<PgDbContext>((context, services) =>
+                    {
+                        // var env = services.GetService<IWebHostEnvironment>();
+                        // var settings = services.GetService<IOptions<CMSSettings>>();
+                        // var logger = services.GetService<ILogger<PgDbContext>>();
+
+                        // new PgDbContextSeed()
+                        //     .SeedAsync(context, env, settings, logger)
+                        //     .Wait();
+                    });
+                
                 Log.Information("Starting web host ({ApplicationContext})...", AppName);
                 host.Run();
 
@@ -43,44 +60,22 @@ namespace CMS.API
             }
         }
 
-        private static IWebHost BuildWebHost(IConfiguration configuration, string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
-                .CaptureStartupErrors(false)
-                .ConfigureKestrel(options =>
-                {
-                    var ports = GetDefinedPorts(configuration);
-                    options.Listen(IPAddress.Any, ports.httpPort, listenOptions =>
-                    {
-                        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
-                    });
-
-                    options.Listen(IPAddress.Any, ports.grpcPort, listenOptions =>
-                    {
-                        listenOptions.Protocols = HttpProtocols.Http2;
-                    });
-
-                })
-                .ConfigureAppConfiguration(x => x.AddConfiguration(configuration))
-                .UseFailing(options =>
-                {
-                    options.ConfigPath = "/Failing";
-                    options.NotFilteredPaths.AddRange(new[] { "/hc", "/liveness" });
-                })
-                .UseStartup<Startup>()
-                .UseContentRoot(Directory.GetCurrentDirectory())
+        private static IHost BuildWebHost(IConfiguration configuration, string[] args) =>
+            Host.CreateDefaultBuilder(args)
                 .UseSerilog()
+                .UseContentRoot(Directory.GetCurrentDirectory())
+                .ConfigureWebHostDefaults(wb => wb.UseStartup<Startup>())
+                .ConfigureAppConfiguration(x => x.AddConfiguration(configuration))
                 .Build();
 
         private static Serilog.ILogger CreateSerilogLogger(IConfiguration configuration)
         {
-            var seqServerUrl = configuration["Serilog:SeqServerUrl"];
             var logstashUrl = configuration["Serilog:LogstashgUrl"];
             return new LoggerConfiguration()
                 .MinimumLevel.Verbose()
                 .Enrich.WithProperty("ApplicationContext", AppName)
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
-                .WriteTo.Seq(string.IsNullOrWhiteSpace(seqServerUrl) ? "http://seq" : seqServerUrl)
                 .WriteTo.Http(string.IsNullOrWhiteSpace(logstashUrl) ? "http://logstash:8080" : logstashUrl)
                 .ReadFrom.Configuration(configuration)
                 .CreateLogger();
@@ -92,16 +87,6 @@ namespace CMS.API
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddEnvironmentVariables();
-
-            var config = builder.Build();
-
-            if (config.GetValue<bool>("UseVault", false))
-            {
-                builder.AddAzureKeyVault(
-                    $"https://{config["Vault:Name"]}.vault.azure.net/",
-                    config["Vault:ClientId"],
-                    config["Vault:ClientSecret"]);
-            }
 
             return builder.Build();
         }
