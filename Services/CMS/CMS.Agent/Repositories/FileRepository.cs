@@ -44,7 +44,7 @@ public class FileRepository : IFileRepository
     
     private async Task CopyFileAsync(string sourcePath, string destinationPath)
     {
-        await using Stream source = File.Open(sourcePath, FileMode.Open);
+        await using Stream source = File.Open(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         await using Stream destination = File.Create(destinationPath);
         await source.CopyToAsync(destination);
     }
