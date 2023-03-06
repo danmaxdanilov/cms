@@ -45,6 +45,8 @@ public class AddEntryCommandHandler: BaseKafkaConsumerWorkerService<string, AddE
             };
             
             await _responseSink.SendAsync(key, response, CancellationToken.None);
+            
+            _logger.LogInformation(string.Format("Entry name: {0} version: {1} successfully added", value.PackageName, value.PackageVersion));
         }
         catch (Exception e)
         {
