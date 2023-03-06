@@ -54,7 +54,13 @@ namespace CMS.API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("text");
 
+                    b.Property<string>("FileName")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PlistFileName")
                         .HasColumnType("text");
 
                     b.Property<string>("Version")

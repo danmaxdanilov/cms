@@ -74,8 +74,10 @@ public class EntryController : Controller
             error_message += $"Поле {nameof(entryRequest.Name)} не может быть пустым. \r\n";
         if (string.IsNullOrEmpty(entryRequest.Version))
             error_message += $"Поле {nameof(entryRequest.Version)} не может быть пустым. \r\n";
-        // if (string.IsNullOrEmpty(entryFileName))
-        //     error_message += $"Поле {nameof(entryFileName)} не может быть пустым. \r\n";
+        if (string.IsNullOrEmpty(entryRequest.FileName))
+             error_message += $"Поле {nameof(entryRequest.FileName)} не может быть пустым. \r\n";
+        if (string.IsNullOrEmpty(entryRequest.PlistFileName))
+            error_message += $"Поле {nameof(entryRequest.PlistFileName)} не может быть пустым. \r\n";
         
         var entryInDb = await _entryService.FindFirstEntryByFilterAsync(entryRequest);
         if (entryInDb != null)

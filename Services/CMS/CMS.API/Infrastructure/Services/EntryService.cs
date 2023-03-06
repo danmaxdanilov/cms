@@ -86,7 +86,9 @@ public class EntryService : IEntryService
         var entryItem = new EntryItem
         {
             Name = entryRequest.Name,
-            Version = entryRequest.Version
+            Version = entryRequest.Version,
+            FileName = entryRequest.FileName,
+            PlistFileName = entryRequest.PlistFileName
         };
         var entry = _mapper.Map<EntryItem, Entry>(entryItem);
         var entryIdDb = await _entryRepository.AddEntryAsync(entry);
@@ -106,8 +108,8 @@ public class EntryService : IEntryService
                 EntryId = entryIdDb.Id,
                 PackageName = entryIdDb.Name,
                 PackageVersion = entryIdDb.Version,
-                PackageFileName = "",
-                PlistFileName = ""
+                PackageFileName = entryIdDb.FileName,
+                PlistFileName = entryIdDb.PlistFileName
             };
             await _kafkaSink.SendAsync(command.Id, message, CancellationToken.None);
         }

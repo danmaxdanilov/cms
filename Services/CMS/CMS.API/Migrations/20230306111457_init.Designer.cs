@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CMS.API.Migrations
 {
     [DbContext(typeof(PgDbContext))]
-    [Migration("20230306083129_init")]
+    [Migration("20230306111457_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -57,7 +57,13 @@ namespace CMS.API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("text");
 
+                    b.Property<string>("FileName")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PlistFileName")
                         .HasColumnType("text");
 
                     b.Property<string>("Version")

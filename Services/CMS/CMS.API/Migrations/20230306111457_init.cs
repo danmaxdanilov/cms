@@ -21,7 +21,9 @@ namespace CMS.API.Migrations
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: true),
-                    Version = table.Column<string>(type: "text", nullable: true)
+                    Version = table.Column<string>(type: "text", nullable: true),
+                    FileName = table.Column<string>(type: "text", nullable: true),
+                    PlistFileName = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
