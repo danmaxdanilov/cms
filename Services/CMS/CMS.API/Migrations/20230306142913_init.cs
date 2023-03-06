@@ -39,6 +39,7 @@ namespace CMS.API.Migrations
                     Status = table.Column<string>(type: "text", nullable: true),
                     ErrorMessage = table.Column<string>(type: "text", nullable: true),
                     EventDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Comment = table.Column<string>(type: "text", nullable: true),
                     entryId = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>

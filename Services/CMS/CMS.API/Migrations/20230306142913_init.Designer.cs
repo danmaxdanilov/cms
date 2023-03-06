@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CMS.API.Migrations
 {
     [DbContext(typeof(PgDbContext))]
-    [Migration("20230306111457_init")]
+    [Migration("20230306142913_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -30,6 +30,9 @@ namespace CMS.API.Migrations
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Comment")
                         .HasColumnType("text");
 
                     b.Property<string>("ErrorMessage")

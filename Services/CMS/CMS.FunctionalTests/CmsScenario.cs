@@ -63,7 +63,7 @@ namespace CMS.FunctionalTests
                 var entryInDb = await context.Entries.Where(x => x.Name == name).OrderBy(x => x.Version).LastOrDefaultAsync();
                 var version = entryInDb == null ? "1.0" : entryInDb.Version + ".2";
                 
-                var content = new StringContent(BuildEntryRequest(name, version), UTF8Encoding.UTF8, "application/json");
+                var content = new StringContent(BuildAddEntryRequest(name, version), UTF8Encoding.UTF8, "application/json");
                 
                 var response = await server.CreateClient()
                     .PutAsync(Put.AddEntry, content);
@@ -77,14 +77,53 @@ namespace CMS.FunctionalTests
                 Assert.Equal(version, entry.Version);
             }
         }
-
-
-        string BuildEntryRequest(string name, string version)
+    
+        [Fact]
+        public async Task RemoveEntry_Success()
         {
-            var requestItem = new EntryRequest
+            using (var server = CreateServer())
+            {
+                var context = server.Host.Services.GetRequiredService<PgDbContext>();
+                var logger = server.Host.Services.GetRequiredService<ILogger<PgDbContext>>();
+                    
+                await PgDbContextSeed.SeedDatabaseAsync(context, logger);
+
+                var name = "mc";
+                var fakeReason = "very fake reason to remove entry";
+                var entryInDb = await context.Entries.Where(x => x.Name == name).OrderBy(x => x.Version).LastOrDefaultAsync();
+                Assert.NotNull(entryInDb);
+                
+                var content = new StringContent(BuildRemoveEntryRequest(entryInDb.Id, fakeReason), UTF8Encoding.UTF8, "application/json");
+                
+                var response = await server.CreateClient()
+                    .PostAsync(Post.RemoveEntry, content);
+
+                response.EnsureSuccessStatusCode();
+                var responseBody = await response.Content.ReadAsStringAsync();
+                Assert.False(string.IsNullOrEmpty(responseBody));
+                Assert.Contains(entryInDb.Id, responseBody);
+            }
+        }
+        
+        string BuildAddEntryRequest(string name, string version)
+        {
+            var requestItem = new AddEntryRequest
             {
                 Name = name,
-                Version = version
+                Version = version,
+                FileName = $"{name}.pkg",
+                PlistFileName = $"{name}.plist"
+            };
+            
+            return JsonSerializer.Serialize(requestItem);
+        }
+        
+        string BuildRemoveEntryRequest(string entryId, string reason)
+        {
+            var requestItem = new RemoveEntryRequest
+            {
+                EntryId = entryId,
+                Reason = reason
             };
             
             return JsonSerializer.Serialize(requestItem);

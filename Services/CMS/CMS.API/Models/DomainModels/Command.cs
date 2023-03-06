@@ -10,6 +10,8 @@ public class Command
     public string Status { get; set; }
     public string ErrorMessage { get; set; }
     public DateTime EventDate { get; set; }
+    
+    public string Comment { get; set; }
 
     [ForeignKey("entryId")]
     public Entry Entry { get; set; }

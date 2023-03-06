@@ -212,7 +212,10 @@ namespace CMS.API
         protected virtual void ConfigureKafka(IServiceCollection services)
         {
             services.AddKafka(Configuration["Kafka:BootstrapServers"], Configuration["Kafka:GroupId"]);
+            
             services.AddKafkaProducer<string, AddEntryCommand>();
+            services.AddKafkaProducer<string, RemoveEntryCommand>();
+            
             services.AddHostedService<AddEntryCommandResponseHandler>();
         }
     }

@@ -36,11 +36,12 @@ namespace CMS.FunctionalTests.Base
             }
         }
 
-        protected override void ConfigureKafka(IServiceCollection serviceCollection)
+        protected override void ConfigureKafka(IServiceCollection services)
         {
             //disable kafka for tests
-            serviceCollection.AddKafka(Configuration["Kafka:BootstrapServers"], Configuration["Kafka:GroupId"]);
-            serviceCollection.AddKafkaProducer<string, AddEntryCommand>();
+            services.AddKafka(Configuration["Kafka:BootstrapServers"], Configuration["Kafka:GroupId"]);
+            services.AddKafkaProducer<string, AddEntryCommand>();
+            services.AddKafkaProducer<string, RemoveEntryCommand>();
             //base.ConfigureKafka(serviceCollection);
         }
 

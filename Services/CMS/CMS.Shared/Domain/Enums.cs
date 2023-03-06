@@ -12,7 +12,10 @@ public enum CommandStatus
     Error = 2,
     
     [Display(Name = "В процессе")]
-    InProgress = 3
+    InProgress = 3,
+    
+    [Display(Name = "Помечено как удаленное")]
+    MarkDeleted = 10
 }
 
 public static class EnumExtentions

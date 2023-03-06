@@ -39,6 +39,7 @@ namespace CMS.FunctionalTests.Base
 
         public static class Post
         {
+            public static string RemoveEntry = $"{ApiUrlBase}/entry/remove";
         }
         
         public static class Put

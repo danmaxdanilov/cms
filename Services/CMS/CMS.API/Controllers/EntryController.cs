@@ -67,7 +67,7 @@ public class EntryController : Controller
     [ProducesResponseType((int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> AddEntry(
-        [FromBody] EntryRequest entryRequest)
+        [FromBody] AddEntryRequest entryRequest)
     {
         var error_message = string.Empty;
         if (string.IsNullOrEmpty(entryRequest.Name))
@@ -90,6 +90,41 @@ public class EntryController : Controller
         {
             var model = await _entryService.AddEntryToRepository(entryRequest);
             return Ok(model);
+        }
+        catch (ArgumentOutOfRangeException e)
+        {
+            return BadRequest(e);
+        }
+        catch (Exception e)
+        {
+            return NotFound(e);
+        }
+    }
+    
+    [HttpPost("remove")]
+    [ProducesResponseType((int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
+    public async Task<IActionResult> RemoveEntry(
+        [FromBody] RemoveEntryRequest entryRequest)
+    {
+        var error_message = string.Empty;
+        if (string.IsNullOrEmpty(entryRequest.EntryId))
+            error_message += $"Поле {nameof(entryRequest.EntryId)} не может быть пустым. \r\n";
+        if (string.IsNullOrEmpty(entryRequest.Reason))
+            error_message += $"Поле {nameof(entryRequest.Reason)} не может быть пустым. \r\n";
+
+        if (error_message.Length > 0)
+            return BadRequest(error_message);
+        
+        var entryInDb = await _entryService.FindFirstEntryByFilterAsync(entryRequest);
+        if (entryInDb == null)
+            return NotFound(string.Format("Пакет #{0} не найден. ", entryRequest.EntryId));
+
+        try
+        {
+            var entryId = await _entryService.RemoveEntryFromRepository(entryRequest);
+            return Ok(string.Format("Отправлена команда на удаление по пакету #{0}", entryId));
         }
         catch (ArgumentOutOfRangeException e)
         {
