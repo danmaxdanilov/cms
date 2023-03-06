@@ -15,6 +15,6 @@ public class EntryItem
     public string Name { get; set; }
     public string Version { get; set; }
     
-    public string CurrentStatus => HistoryItems.LastOrDefault()?.Status;
+    public string CurrentStatus => HistoryItems.OrderByDescending(x => x.EventDate).FirstOrDefault()?.Status;
     public List<EntryHistoryItem> HistoryItems { get; set; }
 }
