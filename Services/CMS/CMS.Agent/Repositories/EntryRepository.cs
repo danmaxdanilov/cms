@@ -19,6 +19,7 @@ public class EntryRepository : IEntryRepository
     public EntryRepository(LiteDataContext ctx)
     {
         _ctx = ctx;
+        _ctx.Database.EnsureCreatedAsync().GetAwaiter().GetResult();
     }
     
     public async Task Add(EntryPackage entry)

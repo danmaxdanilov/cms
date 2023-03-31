@@ -50,35 +50,7 @@ namespace CMS.API
                 .AddApplicationPart(typeof(CMSController).Assembly)
                 .AddNewtonsoftJson();
 
-            services.AddSwaggerGen(options =>
-            {
-                options.DescribeAllEnumsAsStrings();
-                options.SwaggerDoc("v1", new OpenApiInfo
-                {
-                    Title = "Juridical Robot - CMS HTTP API",
-                    Version = "v1",
-                    Description = "The CMS Service HTTP API"
-                });
-
-                options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
-                {
-                    Type = SecuritySchemeType.OAuth2,
-                    Flows = new OpenApiOAuthFlows()
-                    {
-                        Implicit = new OpenApiOAuthFlow()
-                        {
-                            AuthorizationUrl = new Uri($"{Configuration.GetValue<string>("IdentityUrlExternal")}/connect/authorize"),
-                            TokenUrl = new Uri($"{Configuration.GetValue<string>("IdentityUrlExternal")}/connect/token"),
-                            Scopes = new Dictionary<string, string>()
-                            {
-                                { "CMS", "CMS API" }
-                            }
-                        }
-                    }
-                });
-
-                options.OperationFilter<AuthorizeCheckOperationFilter>();
-            });
+            ConfigureSwaggerService(services);
 
             ConfigureAuthService(services);
 
@@ -99,9 +71,7 @@ namespace CMS.API
                     .AllowCredentials());
             });
 
-            services.AddNpgsql<PgDbContext>(
-                Configuration["ConnectionStrings:PostgreSQL"],
-                opt => opt.MigrationsHistoryTable(HistoryRepository.DefaultTableName, "cms_schema"));
+            ConfigureDatabase(services);
             
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddTransient<IIdentityService, IdentityService>();
@@ -129,14 +99,8 @@ namespace CMS.API
                 app.UsePathBase(pathBase);
             }
 
-            app.UseSwagger()
-               .UseSwaggerUI(setup =>
-               {
-                   setup.SwaggerEndpoint($"{ (!string.IsNullOrEmpty(pathBase) ? pathBase : string.Empty) }/swagger/v1/swagger.json", "CMS.API V1");
-                   setup.OAuthClientId("CMSswaggerui");
-                   setup.OAuthAppName("CMS Swagger UI");
-               });
-
+            ConfigureSwagger(app, pathBase);
+            
             app.UseRouting();
             app.UseCors("CorsPolicy");
             ConfigureAuth(app);
@@ -192,10 +156,66 @@ namespace CMS.API
             app.UseAuthorization();
         }
 
+        
+        
+        protected virtual void ConfigureDatabase(IServiceCollection services)
+        {
+            services.AddNpgsql<PgDbContext>(
+                Configuration["ConnectionStrings:PostgreSQL"],
+                opt => opt.MigrationsHistoryTable(HistoryRepository.DefaultTableName, "cms_schema"));
+        }
+        
+        protected virtual void ConfigureSwaggerService(IServiceCollection services)
+        {
+            services.AddSwaggerGen(options =>
+            {
+                options.DescribeAllEnumsAsStrings();
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "Juridical Robot - CMS HTTP API",
+                    Version = "v1",
+                    Description = "The CMS Service HTTP API"
+                });
+
+                /*options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.OAuth2,
+                    Flows = new OpenApiOAuthFlows()
+                    {
+                        Implicit = new OpenApiOAuthFlow()
+                        {
+                            AuthorizationUrl = new Uri($"{Configuration.GetValue<string>("IdentityUrlExternal")}/connect/authorize"),
+                            TokenUrl = new Uri($"{Configuration.GetValue<string>("IdentityUrlExternal")}/connect/token"),
+                            Scopes = new Dictionary<string, string>()
+                            {
+                                { "CMS", "CMS API" }
+                            }
+                        }
+                    }
+                });*/
+
+                options.OperationFilter<AuthorizeCheckOperationFilter>();
+            });
+        }
+
+        protected virtual void ConfigureSwagger(IApplicationBuilder app, string pathBase)
+        {
+            app.UseSwagger()
+                .UseSwaggerUI(setup =>
+                {
+                    setup.SwaggerEndpoint($"{ (!string.IsNullOrEmpty(pathBase) ? pathBase : string.Empty) }/swagger/v1/swagger.json", "CMS.API V1");
+                    setup.OAuthClientId("CMSswaggerui");
+                    setup.OAuthAppName("CMS Swagger UI");
+                });
+        }
+
         protected virtual void ConfigureKafka(IServiceCollection services)
         {
             services.AddKafka(Configuration["Kafka:BootstrapServers"], Configuration["Kafka:GroupId"]);
+            
             services.AddKafkaProducer<string, AddEntryCommand>();
+            services.AddKafkaProducer<string, RemoveEntryCommand>();
+            
             services.AddHostedService<AddEntryCommandResponseHandler>();
         }
     }

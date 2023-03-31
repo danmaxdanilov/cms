@@ -12,7 +12,7 @@ namespace CMS.Agent.FunctionalTests;
 public class AgentScenario : AgentScenarioBase
 {
     [Fact]
-    public async Task EntryRepositoryTest_Success()
+    public async Task EntryRepository_AddEntry_Success()
     {
         using (var server = CreateServer())
         {
@@ -40,7 +40,7 @@ public class AgentScenario : AgentScenarioBase
     }
     
     [Fact]
-    public async Task EntryServiceTest_Success()
+    public async Task EntryService_AddNewEntry_Success()
     {
         using (var server = CreateServer())
         {
@@ -81,5 +81,11 @@ public class AgentScenario : AgentScenarioBase
             
             repository.ShutDownDirectories();
         }
+    }
+    
+    [Fact]
+    public async Task EntryService_RemoveNewEntry_Success()
+    {
+        throw new NotImplementedException();
     }
 }

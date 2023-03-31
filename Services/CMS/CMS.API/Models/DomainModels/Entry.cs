@@ -11,6 +11,8 @@ public class Entry
     public string Id { get; set; }
     public string Name { get; set; }
     public string Version { get; set; }
+    public string FileName { get; set; }
+    public string PlistFileName { get; set; }
 
     public List<Command> Commands { get; set; }
 }

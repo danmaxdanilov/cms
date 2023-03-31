@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using CMS.API.Infrastructure.Repositories;
 using CMS.Shared.Kafka;
 using CMS.Shared.Kafka.Commands;
 
@@ -35,12 +36,30 @@ namespace CMS.FunctionalTests.Base
             }
         }
 
-        protected override void ConfigureKafka(IServiceCollection serviceCollection)
+        protected override void ConfigureKafka(IServiceCollection services)
         {
             //disable kafka for tests
-            serviceCollection.AddKafka(Configuration["Kafka:BootstrapServers"], Configuration["Kafka:GroupId"]);
-            serviceCollection.AddKafkaProducer<string, AddEntryCommand>();
+            services.AddKafka(Configuration["Kafka:BootstrapServers"], Configuration["Kafka:GroupId"]);
+            services.AddKafkaProducer<string, AddEntryCommand>();
+            services.AddKafkaProducer<string, RemoveEntryCommand>();
             //base.ConfigureKafka(serviceCollection);
+        }
+
+        protected override void ConfigureSwagger(IApplicationBuilder app, string pathBase)
+        {
+            //skip for tests
+        }
+
+        protected override void ConfigureSwaggerService(IServiceCollection services)
+        {
+            //skip for tests
+        }
+
+        protected override void ConfigureDatabase(IServiceCollection services)
+        {
+            //test required
+            //use real database
+            base.ConfigureDatabase(services);
         }
     }
 }

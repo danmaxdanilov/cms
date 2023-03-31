@@ -24,11 +24,16 @@ public interface IEntryService
         int pageSize);
 
     Task<EntryItemDetailed> FindFirstEntryByFilterAsync(
-        EntryRequest entryRequest);
+        AddEntryRequest entryRequest);
+    
+    Task<EntryItemDetailed> FindFirstEntryByFilterAsync(
+        RemoveEntryRequest entryRequest);
 
-    Task<EntryItem> AddEntryToRepository(EntryRequest entryRequest);
+    Task<EntryItem> AddEntryToRepository(AddEntryRequest entryRequest);
 
     Task AddCommandToEntry(string entryId, CommandStatus commandStatus, string commandErrorMessage);
+
+    Task<string> RemoveEntryFromRepository(RemoveEntryRequest entryRequest);
 }
 
 public class EntryService : IEntryService
@@ -36,7 +41,8 @@ public class EntryService : IEntryService
     private readonly ILogger<IEntryService> _logger;
     private readonly IEntryRepository _entryRepository;
     private readonly ICommandRepository _commandRepository;
-    private readonly IKafkaSink<string, AddEntryCommand> _kafkaSink;
+    private readonly IKafkaSink<string, AddEntryCommand> _kafkaAddEntry;
+    private readonly IKafkaSink<string, RemoveEntryCommand> _kafkaRemoveEntry;
     private readonly IMapper _mapper;
 
     public EntryService(
@@ -44,13 +50,15 @@ public class EntryService : IEntryService
         ILogger<IEntryService> logger,
         IMapper mapper, 
         ICommandRepository commandRepository, 
-        IKafkaSink<string, AddEntryCommand> kafkaSink)
+        IKafkaSink<string, AddEntryCommand> kafkaAddEntry, 
+        IKafkaSink<string, RemoveEntryCommand> kafkaRemoveEntry)
     {
         _entryRepository = repository;
         _logger = logger;
         _mapper = mapper;
         _commandRepository = commandRepository;
-        _kafkaSink = kafkaSink;
+        _kafkaAddEntry = kafkaAddEntry;
+        _kafkaRemoveEntry = kafkaRemoveEntry;
     }
 
     public async Task<PaginatedItemsViewModel<EntryItem>> FindEntriesListByFilter(
@@ -73,7 +81,7 @@ public class EntryService : IEntryService
     }
 
     public async Task<EntryItemDetailed> FindFirstEntryByFilterAsync(
-        EntryRequest entryRequest)
+        AddEntryRequest entryRequest)
     {
         var dataFromDb = await _entryRepository.FindFirstEntryByFilterAsync(
             entryRequest.Name,
@@ -81,12 +89,21 @@ public class EntryService : IEntryService
         return _mapper.Map<Entry, EntryItemDetailed>(dataFromDb);
     }
 
-    public async Task<EntryItem> AddEntryToRepository(EntryRequest entryRequest)
+    public async Task<EntryItemDetailed> FindFirstEntryByFilterAsync(RemoveEntryRequest entryRequest)
+    {
+        var dataFromDb = await _entryRepository.FindEntryById(
+            entryRequest.EntryId);
+        return _mapper.Map<Entry, EntryItemDetailed>(dataFromDb);
+    }
+
+    public async Task<EntryItem> AddEntryToRepository(AddEntryRequest entryRequest)
     {
         var entryItem = new EntryItem
         {
             Name = entryRequest.Name,
-            Version = entryRequest.Version
+            Version = entryRequest.Version,
+            FileName = entryRequest.FileName,
+            PlistFileName = entryRequest.PlistFileName
         };
         var entry = _mapper.Map<EntryItem, Entry>(entryItem);
         var entryIdDb = await _entryRepository.AddEntryAsync(entry);
@@ -96,7 +113,7 @@ public class EntryService : IEntryService
             var command = new Command
             {
                 Entry = entryIdDb,
-                Status = "В процессе",
+                Status = "В процессе добавления",
                 EventDate = DateTime.UtcNow
             };
             await _commandRepository.AddCommandAsync(command);
@@ -106,17 +123,17 @@ public class EntryService : IEntryService
                 EntryId = entryIdDb.Id,
                 PackageName = entryIdDb.Name,
                 PackageVersion = entryIdDb.Version,
-                PackageFileName = "",
-                PlistFileName = ""
+                PackageFileName = entryIdDb.FileName,
+                PlistFileName = entryIdDb.PlistFileName
             };
-            await _kafkaSink.SendAsync(command.Id, message, CancellationToken.None);
+            await _kafkaAddEntry.SendAsync(command.Id, message, CancellationToken.None);
         }
         catch (Exception e)
         {
             var command = new Command
             {
                 Entry = entryIdDb,
-                Status = "Ошибка при отправке",
+                Status = "Ошибка при отправке команды на добавление",
                 ErrorMessage = e.Message,
                 EventDate = DateTime.UtcNow
             };
@@ -136,5 +153,42 @@ public class EntryService : IEntryService
             EventDate = DateTime.UtcNow
         };
         await _commandRepository.AddCommandAsync(command);
+    }
+
+    public async Task<string> RemoveEntryFromRepository(RemoveEntryRequest entryRequest)
+    {
+        var entryIdDb = await _entryRepository.FindEntryById(entryRequest.EntryId);
+
+        try
+        {
+            var command = new Command
+            {
+                Entry = entryIdDb,
+                Status = "В процессе удаления",
+                Comment = entryRequest.Reason,
+                EventDate = DateTime.UtcNow
+            };
+            await _commandRepository.AddCommandAsync(command);
+            
+            var message = new RemoveEntryCommand
+            {
+                EntryId = entryIdDb.Id,
+                Reason = entryRequest.Reason
+            };
+            await _kafkaRemoveEntry.SendAsync(command.Id, message, CancellationToken.None);
+        }
+        catch (Exception e)
+        {
+            var command = new Command
+            {
+                Entry = entryIdDb,
+                Status = "Ошибка при отправке команды на удаление",
+                ErrorMessage = e.Message,
+                EventDate = DateTime.UtcNow
+            };
+            await _commandRepository.AddCommandAsync(command);
+        }
+        
+        return entryIdDb.Id;
     }
 }
